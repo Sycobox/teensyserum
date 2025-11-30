@@ -17,6 +17,8 @@ public:
   void noteChange(int midiNote);
   void pitchShift(float _semitones);
   int16_t getNextSample();
+  int* getFrameArr(int size);
+  int getOffset();
   // bool findZeroCrossing();
   // bool wavetable_processor::loadWavetable();
 private:
