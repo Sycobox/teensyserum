@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <AudioStream.h>
 
+
+//header file, read the cpp file for full ducomentation
 class wavetable_processor : public AudioStream {
 public:
   wavetable_processor()
@@ -10,7 +12,6 @@ public:
     curPos = 0;
     pitchMult = 0;
     curSample = 0;
-    // any extra initialization
   }
   virtual void update(void);
   void addOffset(double percent);
@@ -19,8 +20,6 @@ public:
   int16_t getNextSample();
   int* getFrameArr(int size);
   int getOffset();
-  // bool findZeroCrossing();
-  // bool wavetable_processor::loadWavetable();
 private:
   bool playing;
   audio_block_t* block;
