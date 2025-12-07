@@ -53,14 +53,30 @@ int16_t wavetable_processor::getNextSample() {
   __disable_irq();
   //3. skips through the interval using the pitch mult we calculated earlier
   curSample = curSample + pitchMult;
-  //4. if the cur sample is beyond the frame size, reset back to 0
+  //4. if the cur sample is beyond the frame size, move back in range
   if (curSample > frameSize) {
-    curSample = 0;
+    curSample -= frameSize;
   }
-  //cs is set to the actual array value using the index we calculated earlier
-  cs = AudioSampleTestwav[(int)curSample + curPos];
+  //5. Time for linear interpolization! Sets right index to the current sample.
+  int indexR = (int)curSample;
+  //6. We need to find the distance from R, this current sample is offset by
+  float fraction = curSample - (float)indexR;
+  //7. Set left index to index infront of right
+  int indexL = indexR + 1;
+  //8. If the left index is beyond the frame size, wrap around
+  if (indexL >= frameSize) {
+      indexL = 0;
+  }
+  //9. find both the left and right samples
+  int16_t sampleR = AudioSampleTestwav[indexR + curPos];
+  int16_t sampleL = AudioSampleTestwav[indexL + curPos];
+
+  //10. Find the sample point intbetween to interpolate inbetween them!
+  float interpolated_sample = (float)sampleR * (1.0f - fraction) + (float)sampleL * fraction;
+  //11. cs is set to the actual array value using the index we calculated earlier
+  cs = (int16_t)interpolated_sample;
   return cs;
-  //5. allows the calculuation to finish and reenables interrupt
+  //12. allows the calculuation to finish and reenables interrupt
   __enable_irq();
 }
 
@@ -78,24 +94,24 @@ Limits the values so that they are inbetween 0 and 63 and centers the waveform a
 */
 int* wavetable_processor::getFrameArr(int size) {
   int* arr = new int[size];
-  // use a double for the step size to ensure accurate indexing
-  double step_size = (double)frameSize / size;
+  // use a double for the stepSize to calculate the interval to skip for the framesize
+  double stepSize = (double)frameSize / size;
   for (int i = 0; i < size; i++) {  // Loop 'size' times to fill all of arr
-    // 1. calculates the high-resolution input index using the double step_size
-    int input_index = (int)(i * step_size) + curPos;
-    uint16_t raw_value = (uint16_t)AudioSampleTestwav[input_index];
+    // 1. calculates the high-resolution input index using the double stepSize
+    int inputIndex = (int)(i * stepSize) + curPos;
+    uint16_t rawVal = (uint16_t)AudioSampleTestwav[inputIndex];
     // 2. convert unsigned sample to signed (centered at 0)
-    int signed_sample = (int)raw_value - 32768;
+    int signedSample = (int)rawVal - 32768;
     // 3. linear Scaling: Map the signed sample (-32768 to 32767) to pixel range (-32 to 32)
     // we multiply the signed sample by the scale factor to get the signed pixel displacement.
-    double scaled_displacement = (double)signed_sample * ((64.0 / 2.0) / 32767.0);
+    double displacement = (double)signedSample * ((64.0 / 2.0) / 32767.0);
     //4. converts the negative pixel values back to the middle and centers at 32 pixels as the middle point
-    if (scaled_displacement < 0) {
-      scaled_displacement += 64;
+    if (displacement < 0) {
+      displacement += 64;
     }
     // 5. assign the signed pixel displacement to the array
     // we use std::round() for the best visual representation.
-    arr[i] = (int)std::round(scaled_displacement);
+    arr[i] = (int)std::round(displacement);
   }
   return arr;
 }
